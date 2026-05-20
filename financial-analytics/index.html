@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Financial Transaction Analytics</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #050a14;
+      --surface: #091120;
+      --surface2: #0d1928;
+      --surface3: #111f33;
+      --border: #162438;
+      --primary: #0ea5e9;
+      --green: #22c55e;
+      --red: #ef4444;
+      --amber: #f59e0b;
+      --purple: #a855f7;
+      --text: #e2eaf4;
+      --text-muted: #5a7a9a;
+      --text-dim: #2a3f55;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family: 'IBM Plex Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* SCANLINE EFFECT */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(14,165,233,0.015) 2px, rgba(14,165,233,0.015) 4px);
+      pointer-events: none; z-index: 0;
+    }
+
+    /* HEADER */
+    header {
+      position: relative; z-index: 1;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 28px;
+      display: flex; align-items: stretch;
+    }
+    .header-brand {
+      display: flex; align-items: center; gap: 14px;
+      padding: 16px 24px 16px 0;
+      border-right: 1px solid var(--border);
+      margin-right: 24px;
+    }
+    .brand-icon {
+      width: 40px; height: 40px;
+      border: 1px solid var(--primary);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+      box-shadow: 0 0 12px rgba(14,165,233,0.2);
+    }
+    .brand-name { font-size: 14px; font-weight: 700; letter-spacing: 0.5px; }
+    .brand-sub { font-size: 10px; color: var(--text-muted); font-family: 'IBM Plex Mono', monospace; letter-spacing: 1px; }
+    .header-stats { display: flex; align-items: center; gap: 28px; flex: 1; }
+    .hstat { padding: 16px 0; }
+    .hstat-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; font-family: 'IBM Plex Mono', monospace; }
+    .hstat-val { font-size: 18px; font-weight: 700; font-family: 'IBM Plex Mono', monospace; margin-top: 2px; }
+    .hstat-val.green { color: var(--green); }
+    .hstat-val.red { color: var(--red); }
+    .hstat-val.amber { color: var(--amber); }
+    .hstat-val.blue { color: var(--primary); }
+    .live-badge {
+      margin-left: auto;
+      display: flex; align-items: center; gap: 8px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px; color: var(--primary);
+      padding: 0 0 0 24px;
+      border-left: 1px solid var(--border);
+    }
+    .live-dot {
+      width: 7px; height: 7px;
+      background: var(--green);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--green);
+      animation: blink 1.5s infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+    /* MAIN */
+    .main { position: relative; z-index: 1; padding: 24px 28px; max-width: 1440px; margin: 0 auto; }
+
+    /* ALERT BANNER */
+    .alert-bar {
+      display: flex; align-items: center; gap: 12px;
+      background: rgba(239,68,68,0.1);
+      border: 1px solid rgba(239,68,68,0.3);
+      border-radius: 8px;
+      padding: 10px 16px;
+      margin-bottom: 20px;
+      font-size: 12px;
+    }
+    .alert-icon { font-size: 16px; }
+    .alert-text { flex: 1; }
+    .alert-text strong { color: var(--red); }
+    .alert-count { font-family: 'IBM Plex Mono', monospace; background: var(--red); color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; }
+
+    /* GRID */
+    .grid-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 16px; }
+    .grid-2-1 { display: grid; grid-template-columns: 2fr 1fr; gap: 14px; margin-bottom: 16px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 16px; }
+    .grid-3-2 { display: grid; grid-template-columns: 3fr 2fr; gap: 14px; margin-bottom: 16px; }
+
+    /* CARD */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px 20px;
+    }
+    .card-title { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-muted); margin-bottom: 4px; }
+    .card-val { font-size: 26px; font-weight: 700; font-family: 'IBM Plex Mono', monospace; }
+    .card-val.primary { color: var(--primary); }
+    .card-val.green { color: var(--green); }
+    .card-val.red { color: var(--red); }
+    .card-val.amber { color: var(--amber); }
+    .card-sub { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+    .card-delta { font-size: 11px; margin-top: 6px; font-family: 'IBM Plex Mono', monospace; }
+    .card-delta.up { color: var(--green); }
+    .card-delta.down { color: var(--red); }
+
+    /* CHART CARD */
+    .chart-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px 20px;
+    }
+    .chart-label {
+      font-size: 13px; font-weight: 600; margin-bottom: 2px;
+    }
+    .chart-meta { font-size: 10px; color: var(--text-muted); font-family: 'IBM Plex Mono', monospace; margin-bottom: 14px; }
+
+    /* ANOMALY TABLE */
+    table { width: 100%; border-collapse: collapse; }
+    thead th {
+      font-size: 10px; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: 0.8px;
+      padding: 8px 10px; text-align: left;
+      border-bottom: 1px solid var(--border);
+      font-family: 'IBM Plex Mono', monospace;
+    }
+    tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
+    tbody tr:hover { background: var(--surface2); }
+    tbody tr:last-child { border-bottom: none; }
+    tbody td { padding: 10px; font-size: 12px; }
+    .mono { font-family: 'IBM Plex Mono', monospace; }
+
+    /* STATUS */
+    .status {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 8px; border-radius: 4px;
+      font-size: 10px; font-weight: 700; font-family: 'IBM Plex Mono', monospace;
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .status::before { content:''; width:5px; height:5px; border-radius:50%; }
+    .status.flagged { background: rgba(239,68,68,0.12); color: var(--red); }
+    .status.flagged::before { background: var(--red); box-shadow: 0 0 4px var(--red); }
+    .status.review { background: rgba(245,158,11,0.12); color: var(--amber); }
+    .status.review::before { background: var(--amber); }
+    .status.clear { background: rgba(34,197,94,0.1); color: var(--green); }
+    .status.clear::before { background: var(--green); }
+
+    /* QUERY BLOCK */
+    .query-block {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--primary);
+      border-radius: 0 8px 8px 0;
+      padding: 14px 16px;
+      margin-bottom: 12px;
+    }
+    .query-label { font-size: 10px; color: var(--primary); font-family: 'IBM Plex Mono', monospace; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 1px; }
+    .query-code { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #a0c8f0; line-height: 1.6; }
+    .query-code .kw { color: #7dd3fc; }
+    .query-code .fn { color: #86efac; }
+    .query-code .str { color: #fbbf24; }
+    .query-result { margin-top: 8px; font-size: 11px; color: var(--text-muted); }
+
+    footer {
+      position: relative; z-index: 1;
+      text-align: center; padding: 18px;
+      color: var(--text-dim); font-size: 10px;
+      font-family: 'IBM Plex Mono', monospace;
+      border-top: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-brand">
+    <div class="brand-icon">🏦</div>
+    <div>
+      <div class="brand-name">FinTrans Analytics</div>
+      <div class="brand-sub">ANOMALY DETECTION SYSTEM v2.1</div>
+    </div>
+  </div>
+  <div class="header-stats">
+    <div class="hstat">
+      <div class="hstat-label">Txns Processed</div>
+      <div class="hstat-val blue">2.4M</div>
+    </div>
+    <div class="hstat">
+      <div class="hstat-label">Total Volume</div>
+      <div class="hstat-val green">₹482Cr</div>
+    </div>
+    <div class="hstat">
+      <div class="hstat-label">Anomalies Detected</div>
+      <div class="hstat-val red">347</div>
+    </div>
+    <div class="hstat">
+      <div class="hstat-label">False Positive Rate</div>
+      <div class="hstat-val amber">2.1%</div>
+    </div>
+  </div>
+  <div class="live-badge">
+    <div class="live-dot"></div>
+    PIPELINE LIVE
+  </div>
+</header>
+
+<div class="main">
+  <!-- Alert -->
+  <div class="alert-bar">
+    <div class="alert-icon">🔴</div>
+    <div class="alert-text"><strong>ANOMALY ALERT:</strong> 14 high-confidence fraudulent transactions detected in the last 6 hours. SQL validation pipeline flagged ₹8,24,000 in suspicious activity.</div>
+    <div class="alert-count">14 NEW</div>
+  </div>
+
+  <!-- KPI Row -->
+  <div class="grid-4">
+    <div class="card">
+      <div class="card-title">Daily Transaction Volume</div>
+      <div class="card-val primary">₹18.4Cr</div>
+      <div class="card-delta up">↑ 6.2% vs yesterday</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Anomaly Rate</div>
+      <div class="card-val amber">0.014%</div>
+      <div class="card-sub">of total transactions</div>
+      <div class="card-delta up">↓ Improved from 0.021%</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Auto-Blocked Txns</div>
+      <div class="card-val red">28</div>
+      <div class="card-sub">Today · Rule-engine</div>
+      <div class="card-delta down">↑ 3 vs yesterday</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Query Execution Time</div>
+      <div class="card-val green">1.2s</div>
+      <div class="card-sub">Avg on 2.4M records</div>
+      <div class="card-delta up">↓ 40% optimized</div>
+    </div>
+  </div>
+
+  <!-- Row 2: Volume + Breakdown -->
+  <div class="grid-2-1">
+    <div class="chart-card">
+      <div class="chart-label">Transaction Volume & Anomaly Overlay</div>
+      <div class="chart-meta">HOURLY · LAST 24 HRS · 2.4M TRANSACTIONS</div>
+      <canvas id="volumeChart" height="110"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-label">Anomaly Type Breakdown</div>
+      <div class="chart-meta">CLASSIFICATION RESULTS</div>
+      <canvas id="anomalyType" height="150"></canvas>
+    </div>
+  </div>
+
+  <!-- Row 3: Trend charts -->
+  <div class="grid-3">
+    <div class="chart-card">
+      <div class="chart-label">Daily Txn Count (30 Days)</div>
+      <div class="chart-meta">SQL AGGREGATED · TREND</div>
+      <canvas id="dailyCount" height="150"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-label">Transaction Category Split</div>
+      <div class="chart-meta">BY PAYMENT TYPE</div>
+      <canvas id="catChart" height="150"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-label">Hourly Anomaly Score</div>
+      <div class="chart-meta">Z-SCORE ANOMALY DETECTION</div>
+      <canvas id="zscoreChart" height="150"></canvas>
+    </div>
+  </div>
+
+  <!-- Anomaly Table + SQL Queries -->
+  <div class="grid-3-2">
+    <div class="chart-card">
+      <div class="chart-label">Flagged Transactions — Detailed Log</div>
+      <div class="chart-meta" style="margin-bottom:14px">SQL PIPELINE OUTPUT · ANOMALY SCORE > 0.85</div>
+      <table>
+        <thead>
+          <tr>
+            <th>Txn ID</th>
+            <th>Amount</th>
+            <th>Type</th>
+            <th>Account</th>
+            <th>Score</th>
+            <th>Rule Hit</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="anomalyTable"></tbody>
+      </table>
+    </div>
+    <div class="chart-card">
+      <div class="chart-label">SQL Query Snippets</div>
+      <div class="chart-meta" style="margin-bottom:14px">OPTIMIZED QUERIES · EXECUTION LOG</div>
+      <div class="query-block">
+        <div class="query-label">Query 1 · Anomaly Detection</div>
+        <div class="query-code">
+<span class="kw">SELECT</span> txn_id, amount, z_score,<br>
+&nbsp;&nbsp;<span class="fn">CASE WHEN</span> z_score <span class="kw">></span> <span class="str">3.0</span><br>
+&nbsp;&nbsp;<span class="kw">THEN</span> <span class="str">'ANOMALY'</span><br>
+&nbsp;&nbsp;<span class="kw">ELSE</span> <span class="str">'NORMAL'</span> <span class="fn">END</span> <span class="kw">AS</span> flag<br>
+<span class="kw">FROM</span> transactions_v2<br>
+<span class="kw">WHERE</span> txn_date <span class="kw">=</span> <span class="fn">CURDATE</span>()<br>
+<span class="kw">ORDER BY</span> z_score <span class="kw">DESC</span>;
+        </div>
+        <div class="query-result">⚡ Executed in 0.82s · 2.4M rows scanned</div>
+      </div>
+      <div class="query-block">
+        <div class="query-label">Query 2 · Hourly Volume Agg</div>
+        <div class="query-code">
+<span class="kw">SELECT</span><br>
+&nbsp;&nbsp;<span class="fn">DATE_FORMAT</span>(txn_time,<span class="str">'%H:00'</span>),<br>
+&nbsp;&nbsp;<span class="fn">COUNT</span>(*) <span class="kw">AS</span> txn_count,<br>
+&nbsp;&nbsp;<span class="fn">SUM</span>(amount) <span class="kw">AS</span> total_vol<br>
+<span class="kw">FROM</span> transactions_v2<br>
+<span class="kw">GROUP BY</span> <span class="fn">HOUR</span>(txn_time)<br>
+<span class="kw">ORDER BY</span> 1;
+        </div>
+        <div class="query-result">⚡ Executed in 1.24s · Index optimized</div>
+      </div>
+      <div class="query-block">
+        <div class="query-label">Query 3 · Duplicate Detection</div>
+        <div class="query-code">
+<span class="kw">SELECT</span> account_id, amount,<br>
+&nbsp;&nbsp;<span class="fn">COUNT</span>(*) <span class="kw">AS</span> dup_count<br>
+<span class="kw">FROM</span> transactions_v2<br>
+<span class="kw">WHERE</span> txn_time <span class="kw">BETWEEN</span><br>
+&nbsp;&nbsp;<span class="fn">NOW</span>() - <span class="kw">INTERVAL</span> <span class="str">5 MINUTE</span> <span class="kw">AND</span> <span class="fn">NOW</span>()<br>
+<span class="kw">GROUP BY</span> account_id, amount<br>
+<span class="kw">HAVING</span> dup_count <span class="kw">></span> <span class="str">1</span>;
+        </div>
+        <div class="query-result">⚡ Executed in 0.44s · 12 duplicates found</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>Built with Python (Pandas, NumPy, SciPy) · MySQL · PostgreSQL · Power BI · Financial Transaction Analytics · Portfolio Project</footer>
+
+<script>
+Chart.defaults.color = '#5a7a9a';
+Chart.defaults.font.family = 'IBM Plex Sans';
+
+const hours = Array.from({length:24},(_,i)=>`${String(i).padStart(2,'0')}:00`);
+
+// Volume + Anomaly
+new Chart(document.getElementById('volumeChart'), {
+  data: {
+    labels: hours,
+    datasets: [
+      {
+        type: 'bar',
+        label: 'Txn Volume (K)',
+        data: [18,12,8,6,9,14,28,48,72,85,90,94,88,82,86,91,88,76,68,58,44,36,28,22],
+        backgroundColor: 'rgba(14,165,233,0.2)',
+        borderColor: 'rgba(14,165,233,0.5)',
+        borderWidth: 1, borderRadius: 2, order: 2
+      },
+      {
+        type: 'line',
+        label: 'Anomaly Score',
+        data: [0.1,0.1,0.2,0.3,0.2,0.1,0.4,0.8,1.2,0.6,0.4,2.8,0.5,0.4,3.1,0.6,0.4,0.8,0.3,0.5,1.4,0.3,0.2,0.1],
+        borderColor: '#ef4444',
+        backgroundColor: 'rgba(239,68,68,0.1)',
+        fill: false, tension: 0.4, pointRadius: 3,
+        yAxisID: 'y2', order: 1
+      }
+    ]
+  },
+  options: {
+    plugins: { legend: { position:'bottom', labels:{ boxWidth:10, font:{size:11} } } },
+    scales: {
+      x: { grid:{color:'#162438'} },
+      y: { grid:{color:'#162438'}, position:'left' },
+      y2: { grid:{display:false}, position:'right', min:0, max:5 }
+    }
+  }
+});
+
+// Anomaly Types
+new Chart(document.getElementById('anomalyType'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Large Amount','Velocity Spike','Geo Mismatch','Duplicate','Odd Hours'],
+    datasets: [{
+      data: [34, 27, 18, 13, 8],
+      backgroundColor: ['#ef4444','#f59e0b','#a855f7','#0ea5e9','#22c55e'],
+      borderWidth: 2, borderColor: '#091120'
+    }]
+  },
+  options: {
+    cutout: '60%',
+    plugins: { legend:{ position:'bottom', labels:{boxWidth:8, font:{size:10}} } }
+  }
+});
+
+// Daily Count
+const days = Array.from({length:30},(_,i)=>`D${i+1}`);
+new Chart(document.getElementById('dailyCount'), {
+  type: 'line',
+  data: {
+    labels: days,
+    datasets: [{
+      data: [72,68,80,84,77,90,94,88,102,98,107,112,104,98,110,116,108,120,115,124,118,130,122,128,135,126,132,140,138,145],
+      borderColor: '#0ea5e9',
+      backgroundColor: 'rgba(14,165,233,0.08)',
+      fill: true, tension: 0.3, pointRadius: 0, borderWidth: 2
+    }]
+  },
+  options: {
+    plugins:{legend:{display:false}},
+    scales:{
+      x:{grid:{color:'#162438'}, ticks:{maxTicksLimit:6}},
+      y:{grid:{color:'#162438'}}
+    }
+  }
+});
+
+// Category
+new Chart(document.getElementById('catChart'), {
+  type: 'bar',
+  data: {
+    labels: ['UPI','NEFT','RTGS','Card','IMPS','Wallet'],
+    datasets: [{
+      data: [38, 24, 14, 12, 8, 4],
+      backgroundColor: ['#0ea5e9','#22c55e','#a855f7','#f59e0b','#ef4444','#06b6d4'],
+      borderRadius: 4
+    }]
+  },
+  options: {
+    plugins:{legend:{display:false}},
+    scales:{
+      x:{grid:{display:false}},
+      y:{grid:{color:'#162438'}, ticks:{callback:v=>v+'%'}}
+    }
+  }
+});
+
+// Z-Score
+new Chart(document.getElementById('zscoreChart'), {
+  type: 'line',
+  data: {
+    labels: hours,
+    datasets: [
+      {
+        label: 'Z-Score',
+        data: [0.4,0.3,0.5,0.8,0.4,0.3,1.1,1.8,2.2,1.4,0.9,3.8,1.2,1.0,4.1,1.4,0.9,1.6,0.8,1.1,2.8,0.7,0.5,0.3],
+        borderColor: '#a855f7',
+        backgroundColor: 'rgba(168,85,247,0.08)',
+        fill: true, tension: 0.4, pointRadius: 2, borderWidth: 2
+      },
+      {
+        label: 'Threshold (3.0)',
+        data: Array(24).fill(3.0),
+        borderColor: '#ef4444', borderDash:[4,3], borderWidth:1.5,
+        pointRadius: 0, fill: false
+      }
+    ]
+  },
+  options: {
+    plugins:{ legend:{ position:'bottom', labels:{boxWidth:8,font:{size:10}} } },
+    scales:{
+      x:{grid:{color:'#162438'}},
+      y:{grid:{color:'#162438'}, min:0, max:5}
+    }
+  }
+});
+
+// Anomaly Table
+const anomalies = [
+  { id:'TXN-882041', amount:'₹4,82,000', type:'RTGS', acc:'ACC-**4821', score:0.97, rule:'Large + Off-Hours', status:'flagged' },
+  { id:'TXN-773219', amount:'₹1,24,800', type:'NEFT', acc:'ACC-**3310', score:0.94, rule:'Velocity Spike', status:'flagged' },
+  { id:'TXN-921034', amount:'₹88,400', type:'UPI', acc:'ACC-**7092', score:0.91, rule:'Geo Mismatch', status:'flagged' },
+  { id:'TXN-654823', amount:'₹42,600', type:'Card', acc:'ACC-**5511', score:0.88, rule:'Duplicate Pattern', status:'review' },
+  { id:'TXN-112938', amount:'₹1,02,000', type:'IMPS', acc:'ACC-**9023', score:0.86, rule:'Night + Large', status:'flagged' },
+  { id:'TXN-449201', amount:'₹28,400', type:'UPI', acc:'ACC-**2241', score:0.79, rule:'Rapid Fire', status:'review' },
+  { id:'TXN-338814', amount:'₹18,200', type:'Card', acc:'ACC-**6632', score:0.62, rule:'Geo Mismatch', status:'review' },
+  { id:'TXN-220419', amount:'₹8,400', type:'Wallet', acc:'ACC-**1188', score:0.31, rule:'None', status:'clear' },
+];
+const at = document.getElementById('anomalyTable');
+anomalies.forEach(a => {
+  at.innerHTML += `<tr>
+    <td class="mono" style="font-size:11px">${a.id}</td>
+    <td class="mono" style="font-weight:600">${a.amount}</td>
+    <td style="color:var(--text-muted)">${a.type}</td>
+    <td class="mono" style="font-size:11px;color:var(--text-muted)">${a.acc}</td>
+    <td class="mono" style="color:${a.score>0.9?'var(--red)':a.score>0.7?'var(--amber)':'var(--green)'}; font-weight:600">${a.score.toFixed(2)}</td>
+    <td style="font-size:11px;color:var(--text-muted)">${a.rule}</td>
+    <td><span class="status ${a.status}">${a.status}</span></td>
+  </tr>`;
+});
+</script>
+</body>
+</html>

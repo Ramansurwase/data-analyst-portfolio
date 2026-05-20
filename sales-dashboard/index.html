@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sales Performance Dashboard</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0e1a;
+      --surface: #111827;
+      --surface2: #1a2235;
+      --border: #1f2d45;
+      --accent: #00d4aa;
+      --accent2: #ff6b6b;
+      --accent3: #ffd93d;
+      --accent4: #6bcbff;
+      --text: #e8edf5;
+      --text-muted: #6b7a9a;
+      --text-dim: #3d4f70;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    /* HEADER */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky; top: 0; z-index: 100;
+    }
+    .logo { display: flex; align-items: center; gap: 12px; }
+    .logo-icon {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, var(--accent), #00a882);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+    }
+    .logo-text { font-size: 17px; font-weight: 600; letter-spacing: -0.3px; }
+    .logo-sub { font-size: 11px; color: var(--text-muted); font-family: 'Space Mono', monospace; }
+    .header-right { display: flex; align-items: center; gap: 12px; }
+    .date-badge {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      color: var(--text-muted);
+      background: var(--surface2);
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+    }
+    .filter-btn {
+      background: var(--accent);
+      color: #000;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    /* LAYOUT */
+    .container { max-width: 1400px; margin: 0 auto; padding: 28px 32px; }
+    /* PERIOD TABS */
+    .period-bar {
+      display: flex; gap: 8px; margin-bottom: 28px;
+    }
+    .period-btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 8px 18px;
+      border-radius: 6px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .period-btn.active, .period-btn:hover {
+      background: var(--accent);
+      color: #000;
+      border-color: var(--accent);
+      font-weight: 600;
+    }
+    /* KPI CARDS */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .kpi-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 22px;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+    .kpi-card:hover { transform: translateY(-2px); border-color: var(--accent); }
+    .kpi-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+    }
+    .kpi-card.green::before { background: var(--accent); }
+    .kpi-card.red::before { background: var(--accent2); }
+    .kpi-card.yellow::before { background: var(--accent3); }
+    .kpi-card.blue::before { background: var(--accent4); }
+    .kpi-label { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 10px; }
+    .kpi-value { font-size: 28px; font-weight: 700; font-family: 'Space Mono', monospace; letter-spacing: -1px; margin-bottom: 8px; }
+    .kpi-change { font-size: 12px; display: flex; align-items: center; gap: 4px; }
+    .kpi-change.up { color: var(--accent); }
+    .kpi-change.down { color: var(--accent2); }
+    .kpi-icon { position: absolute; right: 18px; top: 18px; font-size: 22px; opacity: 0.18; }
+    /* CHARTS GRID */
+    .charts-row { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 16px; }
+    .charts-row2 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+    .chart-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 22px;
+    }
+    .chart-header {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      margin-bottom: 18px;
+    }
+    .chart-title { font-size: 14px; font-weight: 600; }
+    .chart-subtitle { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .chart-badge {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      background: var(--surface2);
+      color: var(--accent);
+      padding: 4px 8px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+    }
+    canvas { max-width: 100%; }
+    /* TABLES */
+    .table-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 22px;
+      margin-bottom: 16px;
+    }
+    .table-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 18px;
+    }
+    table { width: 100%; border-collapse: collapse; }
+    thead th {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      padding: 10px 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background 0.15s;
+    }
+    tbody tr:hover { background: var(--surface2); }
+    tbody tr:last-child { border-bottom: none; }
+    tbody td { padding: 12px; font-size: 13px; }
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .badge.high { background: rgba(0,212,170,0.15); color: var(--accent); }
+    .badge.mid  { background: rgba(255,217,61,0.15); color: var(--accent3); }
+    .badge.low  { background: rgba(255,107,107,0.15); color: var(--accent2); }
+    .progress-bar { height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; }
+    .progress-fill { height: 100%; border-radius: 3px; background: var(--accent); transition: width 0.8s ease; }
+    .progress-fill.warn { background: var(--accent3); }
+    .progress-fill.danger { background: var(--accent2); }
+    /* FOOTER */
+    footer {
+      text-align: center;
+      padding: 24px;
+      color: var(--text-dim);
+      font-size: 12px;
+      font-family: 'Space Mono', monospace;
+      border-top: 1px solid var(--border);
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">📊</div>
+    <div>
+      <div class="logo-text">Sales Performance Dashboard</div>
+      <div class="logo-sub">ABC TECHNOLOGIES PVT LTD · PUNE</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="date-badge" id="live-date"></div>
+    <button class="filter-btn">↓ Export Report</button>
+  </div>
+</header>
+
+<div class="container">
+  <div class="period-bar">
+    <button class="period-btn active">Q1 2024</button>
+    <button class="period-btn">Q2 2024</button>
+    <button class="period-btn">Q3 2024</button>
+    <button class="period-btn">Q4 2024</button>
+    <button class="period-btn">Full Year</button>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="kpi-grid">
+    <div class="kpi-card green">
+      <div class="kpi-icon">💰</div>
+      <div class="kpi-label">Total Revenue</div>
+      <div class="kpi-value">₹4.82Cr</div>
+      <div class="kpi-change up">↑ 18.4% vs last quarter</div>
+    </div>
+    <div class="kpi-card blue">
+      <div class="kpi-icon">📦</div>
+      <div class="kpi-label">Total Orders</div>
+      <div class="kpi-value">12,340</div>
+      <div class="kpi-change up">↑ 9.7% vs last quarter</div>
+    </div>
+    <div class="kpi-card yellow">
+      <div class="kpi-icon">👥</div>
+      <div class="kpi-label">Active Customers</div>
+      <div class="kpi-value">3,812</div>
+      <div class="kpi-change up">↑ 6.2% vs last quarter</div>
+    </div>
+    <div class="kpi-card red">
+      <div class="kpi-icon">⚠️</div>
+      <div class="kpi-label">Avg Order Value</div>
+      <div class="kpi-value">₹3,908</div>
+      <div class="kpi-change down">↓ 2.1% vs last quarter</div>
+    </div>
+  </div>
+
+  <!-- Charts Row 1 -->
+  <div class="charts-row">
+    <div class="chart-card">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title">Monthly Revenue Trend</div>
+          <div class="chart-subtitle">Revenue vs Target · Jan–Dec 2024</div>
+        </div>
+        <div class="chart-badge">500K+ Records</div>
+      </div>
+      <canvas id="revenueChart" height="110"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title">Revenue by Category</div>
+          <div class="chart-subtitle">Product mix breakdown</div>
+        </div>
+      </div>
+      <canvas id="categoryChart" height="160"></canvas>
+    </div>
+  </div>
+
+  <!-- Charts Row 2 -->
+  <div class="charts-row2">
+    <div class="chart-card">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title">Regional Sales</div>
+          <div class="chart-subtitle">Performance by zone</div>
+        </div>
+      </div>
+      <canvas id="regionalChart" height="180"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title">Weekly Orders</div>
+          <div class="chart-subtitle">Last 12 weeks</div>
+        </div>
+      </div>
+      <canvas id="weeklyChart" height="180"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title">Sales Channel Split</div>
+          <div class="chart-subtitle">Online vs Offline vs Partner</div>
+        </div>
+      </div>
+      <canvas id="channelChart" height="180"></canvas>
+    </div>
+  </div>
+
+  <!-- Top Products Table -->
+  <div class="table-card">
+    <div class="table-header">
+      <div>
+        <div class="chart-title">Top Performing Products</div>
+        <div class="chart-subtitle">Ranked by revenue contribution · Q1 2024</div>
+      </div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Product</th>
+          <th>Category</th>
+          <th>Units Sold</th>
+          <th>Revenue</th>
+          <th>vs Target</th>
+          <th>Target Attainment</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="productTable"></tbody>
+    </table>
+  </div>
+
+  <!-- Regional Performance Table -->
+  <div class="table-card">
+    <div class="table-header">
+      <div>
+        <div class="chart-title">Regional Performance Breakdown</div>
+        <div class="chart-subtitle">Identifying low-performing regions · Automated SQL Report</div>
+      </div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Region</th>
+          <th>Revenue</th>
+          <th>Orders</th>
+          <th>Avg Order</th>
+          <th>Growth %</th>
+          <th>Target Hit</th>
+          <th>Trend</th>
+        </tr>
+      </thead>
+      <tbody id="regionTable"></tbody>
+    </table>
+  </div>
+</div>
+
+<footer>Built with Python · SQL · Power BI · Chart.js &nbsp;|&nbsp; Data Analyst Portfolio Project &nbsp;|&nbsp; ABC Technologies Pvt Ltd</footer>
+
+<script>
+// === Live Date ===
+document.getElementById('live-date').textContent = new Date().toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' });
+
+// === Period Tabs ===
+document.querySelectorAll('.period-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+// === Chart defaults ===
+Chart.defaults.color = '#6b7a9a';
+Chart.defaults.font.family = 'DM Sans';
+
+// === Revenue Trend ===
+new Chart(document.getElementById('revenueChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+    datasets: [
+      {
+        label: 'Revenue (₹L)',
+        data: [28,32,38,35,42,48,44,51,56,60,58,68],
+        backgroundColor: 'rgba(0,212,170,0.25)',
+        borderColor: '#00d4aa',
+        borderWidth: 2,
+        borderRadius: 4,
+        order: 2
+      },
+      {
+        label: 'Target (₹L)',
+        data: [30,30,35,38,40,45,45,50,52,55,58,65],
+        type: 'line',
+        borderColor: '#ffd93d',
+        borderDash: [6,3],
+        borderWidth: 2,
+        pointRadius: 3,
+        fill: false,
+        order: 1
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } },
+    scales: {
+      x: { grid: { color: '#1f2d45' } },
+      y: { grid: { color: '#1f2d45' } }
+    }
+  }
+});
+
+// === Category Donut ===
+new Chart(document.getElementById('categoryChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Software','Hardware','Services','Consulting','Support'],
+    datasets: [{
+      data: [32, 24, 20, 14, 10],
+      backgroundColor: ['#00d4aa','#6bcbff','#ffd93d','#ff6b6b','#b06bff'],
+      borderWidth: 2, borderColor: '#111827'
+    }]
+  },
+  options: {
+    cutout: '65%',
+    plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } } }
+  }
+});
+
+// === Regional Bar ===
+new Chart(document.getElementById('regionalChart'), {
+  type: 'bar',
+  data: {
+    labels: ['West','North','South','East','Central'],
+    datasets: [{
+      label: 'Revenue (₹L)',
+      data: [148, 132, 118, 94, 72],
+      backgroundColor: ['#00d4aa','#6bcbff','#ffd93d','#ff6b6b','#b06bff'],
+      borderRadius: 5
+    }]
+  },
+  options: {
+    indexAxis: 'y',
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { color: '#1f2d45' } },
+      y: { grid: { display: false } }
+    }
+  }
+});
+
+// === Weekly Line ===
+const weeks = Array.from({length:12}, (_,i) => `W${i+1}`);
+new Chart(document.getElementById('weeklyChart'), {
+  type: 'line',
+  data: {
+    labels: weeks,
+    datasets: [{
+      label: 'Orders',
+      data: [820,910,870,950,1020,980,1100,1050,1180,1120,1240,1300],
+      borderColor: '#6bcbff',
+      backgroundColor: 'rgba(107,203,255,0.1)',
+      fill: true,
+      tension: 0.4,
+      pointRadius: 3
+    }]
+  },
+  options: {
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { color: '#1f2d45' } },
+      y: { grid: { color: '#1f2d45' } }
+    }
+  }
+});
+
+// === Channel Pie ===
+new Chart(document.getElementById('channelChart'), {
+  type: 'pie',
+  data: {
+    labels: ['Online Direct','Partner Network','Offline/Field','Resellers'],
+    datasets: [{
+      data: [40, 28, 20, 12],
+      backgroundColor: ['#00d4aa','#ffd93d','#6bcbff','#ff6b6b'],
+      borderWidth: 2, borderColor: '#111827'
+    }]
+  },
+  options: {
+    plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } } }
+  }
+});
+
+// === Product Table ===
+const products = [
+  { name:'Enterprise Suite Pro', cat:'Software', units:1840, rev:'₹52.4L', vs:'+14%', pct:92 },
+  { name:'CloudOps Manager', cat:'Software', units:1320, rev:'₹38.1L', vs:'+22%', pct:110 },
+  { name:'Server Rack X500', cat:'Hardware', units:640, rev:'₹34.6L', vs:'+8%', pct:88 },
+  { name:'Data Analytics Bundle', cat:'Services', units:980, rev:'₹29.3L', vs:'+31%', pct:115 },
+  { name:'Network Switch Pro', cat:'Hardware', units:1100, rev:'₹24.8L', vs:'-3%', pct:72 },
+  { name:'Security Audit Pack', cat:'Consulting', units:420, rev:'₹19.2L', vs:'+5%', pct:84 },
+];
+const ptable = document.getElementById('productTable');
+products.forEach((p,i) => {
+  const status = p.pct >= 100 ? 'high' : p.pct >= 80 ? 'mid' : 'low';
+  const statusLabel = p.pct >= 100 ? 'On Track' : p.pct >= 80 ? 'Near' : 'Below';
+  const fillClass = p.pct >= 100 ? '' : p.pct >= 80 ? 'warn' : 'danger';
+  ptable.innerHTML += `<tr>
+    <td style="color:var(--text-muted);font-family:'Space Mono',monospace">${String(i+1).padStart(2,'0')}</td>
+    <td style="font-weight:500">${p.name}</td>
+    <td style="color:var(--text-muted)">${p.cat}</td>
+    <td style="font-family:'Space Mono',monospace">${p.units.toLocaleString()}</td>
+    <td style="font-family:'Space Mono',monospace;font-weight:600">${p.rev}</td>
+    <td style="color:${p.vs.startsWith('+') ? 'var(--accent)' : 'var(--accent2)'};font-family:'Space Mono',monospace">${p.vs}</td>
+    <td style="min-width:120px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="progress-bar" style="flex:1"><div class="progress-fill ${fillClass}" style="width:${Math.min(p.pct,100)}%"></div></div>
+        <span style="font-size:11px;font-family:'Space Mono',monospace;color:var(--text-muted)">${p.pct}%</span>
+      </div>
+    </td>
+    <td><span class="badge ${status}">${statusLabel}</span></td>
+  </tr>`;
+});
+
+// === Region Table ===
+const regions = [
+  { name:'West', rev:'₹1.48Cr', orders:3840, avg:'₹3,854', growth:'+21%', hit:96 },
+  { name:'North', rev:'₹1.32Cr', orders:3420, avg:'₹3,860', growth:'+17%', hit:88 },
+  { name:'South', rev:'₹1.18Cr', orders:2980, avg:'₹3,960', growth:'+13%', hit:82 },
+  { name:'East', rev:'₹94.2L', orders:2240, avg:'₹4,205', growth:'+6%', hit:67 },
+  { name:'Central', rev:'₹72.1L', orders:1860, avg:'₹3,876', growth:'-2%', hit:58 },
+];
+const rtable = document.getElementById('regionTable');
+regions.forEach(r => {
+  const isDown = r.growth.startsWith('-');
+  const hitClass = r.hit >= 80 ? 'high' : r.hit >= 65 ? 'mid' : 'low';
+  const trendIcon = isDown ? '📉' : r.hit >= 90 ? '🚀' : '📈';
+  rtable.innerHTML += `<tr>
+    <td style="font-weight:600">${r.name}</td>
+    <td style="font-family:'Space Mono',monospace;font-weight:600">${r.rev}</td>
+    <td style="font-family:'Space Mono',monospace">${r.orders.toLocaleString()}</td>
+    <td style="font-family:'Space Mono',monospace">${r.avg}</td>
+    <td style="color:${isDown ? 'var(--accent2)' : 'var(--accent)'};font-family:'Space Mono',monospace;font-weight:600">${r.growth}</td>
+    <td>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="progress-bar" style="width:80px"><div class="progress-fill ${r.hit < 65 ? 'danger' : r.hit < 80 ? 'warn' : ''}" style="width:${r.hit}%"></div></div>
+        <span class="badge ${hitClass}">${r.hit}%</span>
+      </div>
+    </td>
+    <td style="font-size:18px">${trendIcon}</td>
+  </tr>`;
+});
+</script>
+</body>
+</html>

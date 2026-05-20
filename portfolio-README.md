@@ -1,7 +1,7 @@
 # 📂 Data Analyst Portfolio — Projects
 
-> **Name** · Data Analyst · Pune, Maharashtra, India  
-> 📧 yourmail@gmail.com · 🔗 linkedin.com/in/yourprofile · 💻 github.com/yourprofile
+> **RAMAN SURWASE** · Data Analyst · Pune, Maharashtra, India  
+> 📧 ramansurwase09@gmail.com · 🔗 linkedin.com/in/ramansurwase · 
 
 ---
 
